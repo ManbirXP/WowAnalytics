@@ -1,89 +1,145 @@
 import pandas as pd
 import plotly.express as px  # (version 4.7.0)
 import plotly.graph_objects as go
+import plotly.figure_factory as ff
+from dash.dependencies import Input, Output, State, MATCH, ALL
 
 import dash  # (version 1.12.0) pip install dash
+import dash_daq as daq
+
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
-
+import plotly.graph_objects as go
 import psycopg2
 import os
+from sqlalchemy import Column, Integer, String, ForeignKey, Table
 from sqlalchemy import create_engine
-
-# # ------------------------------------------------------------------------------
-# # Import data from postgreSQL using psycopg2
-# conn = psycopg2.connect(dbname="my_db", user=os.environ['psql_username'],\
-#  password=os.environ['psql_pw'], host="localhost", port=5431) # connection string
-# cur = conn.cursor() # cursor object
-#
-# cur.execute('''SELECT * FROM event_count''')
-# for row in cur.fetchall():
-#     print (row)
+from sqlalchemy.orm import relationship
 
 # Import data from postgreSQL using sqlalchemy
-engine = create_engine("postgresql://user:password@localhost:5431/wow_db")
+engine = create_engine("postgresql://manbir:m4nb!r1123@172.31.64.131:5431/wow_db")
+#df1 = pd.read_sql_table("table_auctions_info", engine)
+#g1 = df1.filter(df1['name']=="Face Smasher")
+from sqlalchemy.ext.declarative import declarative_base
+Base = declarative_base()
 
-df1 = pd.read_sql_table("auctions", engine)
-df2 = pd.read_sql_table("auctions_items", engine)
+class allauctions(Base):
+   __tablename__ = 'table_auctions_f1'
 
-# dash Application
-app = dash.Dash(__name__)
+   auc = Column(Integer, primary_key = True)
+   item = Column(Integer , ForeignKey('allitems.id'))
+   bid = Column(Integer)
+   buyout = Column(Integer)
+   ownerRealm = Column(String)
+   owner = Column(String)
+#relationships
+   intelligence = relationship("allitems")
+class allitems(Base):
+    __tablename__ = 'table_info_new_f1'
 
-# ------------------------------------------------------------------------------
-# App layout
+   id = Column(Integer,primary_key = True)
+   name = Column(String)
+   itemLevel = Column(Integer)
+   requiredLevel = Column(Integer)
+   itemClass = Column(Integer)
+   itemSubClass = Column(Integer)
+   stat = Column(Integer)
+   amount = Column(Integer)
+   inventoryType = Column(Integer)
+
+
+#----To get all of the auctions, each auc`:tion must be assigned a unique integer ID#, which will be made the new Primary Key.
+#----...for now, some auctions are eliminated from the database if they have the same owner as another auction in the DB. 
+
+#-----We need to load two databases to work with; one from all-time to view historical data, and this second one...:
+#-----...The most recent scan for every server. 
+#class mostrecentauctions(Base):
+
+from sqlalchemy.orm import sessionmaker
+Session = sessionmaker(bind = engine)
+session = Session()
+def join():
+    records = session.query(allauctions).\
+        join(allitems, allitems.id == allauctions.item).all()
+    for record in records:
+        recordObject = {
+            'name': record.intelligence.name,
+            'bid': record.bid,
+            'buyout': record.buyout,
+            'ownerrealm': record.ownerRealm,
+            'owner': record.owner,
+            'auc': record.auc,
+            'subclass': record.intelligence.itemSubClass,
+        }
+    return recordObject
+external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
+
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.layout = html.Div([
 
-    html.H1("Web Application Dashboards with Dash", style={'text-align': 'center'}),
+    html.Label('Select character level'),
+    daq.NumericInput(
+    min=0,
+    max=110,
+    value=20
+    ),
 
-    dcc.Dropdown(id="slct_item",
-                 options=dropdown_op,
-                 multi=False,
-                 value=min(views_ts.keys()),
-                 style={'width': "40%"}
-                 ),
-html.Div(id='output_container', children=[]),
-    html.Br(),
 
-    dcc.Graph(id='views_timeseries', figure={})
+    html.Label('Select character class'),
+    dcc.Dropdown(
+        id='demo-dropdown',
+        options=[
+        {'label': 'Mage', 'value': 'Mage'},
+            {'label': 'Warlock', 'value': 'Warlock'},
+            {'label': 'Rogue', 'value': 'Rogue'},
+            {'label': 'Demon Hunter', 'value': 'Demon Hunter'},
+            {'label': 'Hunter', 'value': 'Hunter'},
+            {'label': 'Warrior', 'value': 'Warrior'},
+            {'label': 'Paladin', 'value': 'Paladin'},
+            {'label': 'Death Knight', 'value': 'Death Knight'},
 
+            ],
+        value='Mage'
+    ),
+html.Label('Select Realm'),
+    dcc.Dropdown(
+        id='serverdropdown',
+        options=[
+            {'label': 'BlackRock', 'value': 'BlackRock'},
+            {'label': 'Antoniodas', 'value': 'Antoniodas'},
+            {'label': 'Draenor', 'value': 'Draenor'},
+            {'label': 'Ragnaros', 'value': 'Ragnaros'},
+            ],
+        value='BlackRock'
+    ),
+
+    html.Div(id='numeric-input-output'),
+    html.Div(id='dd-output-container'),
+    html.Div(id='ds-output-container')
 ])
 
 
-# ------------------------------------------------------------------------------
-# Connect the Plotly graphs with Dash Components
+#@app.callback(
+#    dash.dependencies.Output('numeric-input-output', 'children'),
+ #   dash.dependencies.Output('dd-output-container', 'children'),
+  #  [dash.dependencies.Input('my-numeric-input', 'value'),
+   #  dash.dependencies.Input('demo-dropdown', 'value')])
+
 @app.callback(
-    [Output(component_id='output_container', component_property='children'),
-     Output(component_id='views_timeseries', component_property='figure')],
-    [Input(component_id='slct_item', component_property='value')]
-)
-def update_graph(option_slctd):
-    print(option_slctd)
-    print(type(option_slctd))
+        Output("ds-output-container","children"),
+        Input("serverdropdown","value"))
 
-    container = "The item id chosen by user was: {}".format(option_slctd)
+def showresults(value):
+    #playerClass = 
+    result = "Best Weapon for you on {} ".format(value)
+    return result
 
-    dff = df.copy()
-    dff = dff[dff["product_id"] == option_slctd]
-    s = pd.to_numeric(dff['time_period'])
-    dff = dff.drop(columns=['time_period'])
-    dff = dff.merge(s.to_frame(), left_index=True, right_index=True)
+server = app.server
 
-    # Plotly Express
-    fig = px.line(
-        data_frame=dff,
-        x = 'time_period',
-        y = 'view_cnt',
-        color = 'product_id',
-        labels={'view_cnt': 'view counts',
-        'time_period':'time since start (minutes)'},
-        template='plotly_dark'
-    )
-
-    return container, fig
-
-
-# ------------------------------------------------------------------------------
 if __name__ == '__main__':
-    app.run_server(debug=True, port=8051, host="10.0.0.6")
-                                                             
+   server.run(debug=True, host = '0.0.0.0' )
+                                                                                                                                                          145,0-1       Bot
+
+   
+    
