@@ -31,9 +31,9 @@ path_auctions = f's3a://wowanalyticsdata/*.json'
 #df_data = spark.read.option("header", "false").option("inferSchema", "false").schema(schema_data).json(path_items)
 df_data = spark.read.json(path_items)
 df_auctions = spark.read.json(path_auctions)
-df_data = df_data.na.drop()
-df_final = df_data.select("id","name",col("itemLevel").as("item_level"),col("requiredLevel").as("requird_level"), col("itemClass").as("item_class"),col("itemSubClass").as("item_subclass"),"bonusStats.stat","bonusStats.amount","inventoryType".as("inventory_type"))\
-df_auctions_final = df_auctions.select("item","buyout","bid",col("ownerRealm").as("realm"),"owner")
+df_item_info = df_data.select("id","name","requiredLevel","itemLevel", "itemClass","itemSubClass","bonusStats.stat","bonusStats.amount", "weaponinfo.dps","inventoryType")
+df_auctions = df.select("auc","item","bid","buyout", "ownerRealm", "owner")
+#Write to postgresql
 df_final.write\
         .format("jdbc")\
         .option("url","jdbc:postgresql://local:5431/wow_db")\
@@ -43,14 +43,12 @@ df_final.write\
         .option("driver","org.postgresql.Driver")\
         .save()
 
-
-
 df_auctions_final.write\
         .format("jdbc")\
-        .option("url","jdbc:postgresql://ec2-3-238-72-162.compute-1.amazonaws.com:5431/wow_db")\
+        .option("url","jdbc:postgresql://localhost:5431/wow_db")\
         .option("dbtable","auctions_db")\
-        .option("user","manbir")\
-        .option("password","m4nb!r1123")\
+        .option("user","user")\
+        .option("password","password")\
         .option("driver","org.postgresql.Driver")\
         .save()
                                  
