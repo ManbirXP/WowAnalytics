@@ -18,7 +18,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import relationship
 
 # Import data from postgreSQL using sqlalchemy
-engine = create_engine("postgresql://manbir:m4nb!r1123@172.31.64.131:5431/wow_db")
+engine = create_engine("postgresql://user@password@localhost:5431/wow_db")
 #df1 = pd.read_sql_table("table_auctions_info", engine)
 #g1 = df1.filter(df1['name']=="Face Smasher")
 from sqlalchemy.ext.declarative import declarative_base
