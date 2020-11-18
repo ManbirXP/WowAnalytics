@@ -32,7 +32,14 @@ path_auctions = f's3a://wowanalyticsdata/*.json'
 df_data = spark.read.json(path_items)
 df_auctions = spark.read.json(path_auctions)
 df_item_info = df_data.select("id","name","requiredLevel","itemLevel", "itemClass","itemSubClass","bonusStats.stat","bonusStats.amount", "weaponinfo.dps","inventoryType")
-df_auctions = df.select("auc","item","bid","buyout", "ownerRealm", "owner")
+#df_auctions = df.select("auc","item","bid","buyout", "ownerRealm", "owner")
+
+df_auctions=df.withColumn("auctions", explode("auctions")).select(
+col("_links.*"),col("auctions.*"))
+#df2 = df_auctions.withColumn("item",explode("item")).select("*",col("item.*")).show()
+#df_auctions.withColumn("col1", split(col("item"), ",").getItem(0)).withColumn("col2", split(col("item"), ",").getItem(1)).show()
+df_auctions_v1 = df_auctions.withColumn("realm_id", split(col("self.href"), "\/").getItem(6)).withColumnRenamed("id","auc").select("auc","item.id","item.modifiers.type","item.modifiers.value","bid","buyout","unit_price","quantity","realm_id")
+df_auctions_v2=df_auctions_v1.withColumnRenamed("id","item").select("auc","item","type","value","bid","buyout","unit_price","quantity","realm_id")
 #Write to postgresql
 df_final.write\
         .format("jdbc")\
