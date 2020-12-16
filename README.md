@@ -1,4 +1,6 @@
 # WowAnalytics
+Found here: http://3.234.239.173/ 
+
 WoW! Analytics (WOW-A) is a trading platform to be used by World of Warcraft players. The website is intrinsically linked to the game's in-game economy, and also provides players with the ability to 
 
 Motivation:
